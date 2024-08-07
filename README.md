@@ -1,5 +1,3 @@
-Aqui está o conteúdo completo em um único arquivo Markdown:
-
 ```markdown
 # Projeto de Transcrição e Sumarização de Áudio
 
