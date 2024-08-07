@@ -1,57 +1,70 @@
-"use strict";
-const { exec } = require("child_process");
-const { GoogleASR } = require("./googleASR");
-const { summarizeText } = require("./sumarize"); // Corrija o caminho se necessário
-const path = require("path");
+import { app, BrowserWindow, ipcMain, dialog } from 'electron';
+import path from 'path';
+import { exec } from 'child_process';
+import { promisify } from 'util';
+import { summarizeText } from './sumarize.js'; // Use extensão .js
 
-// Defina os caminhos dos arquivos de entrada e saída
-const inputFile = path.join(__dirname, '..', 'audios', 'audio.m4a');
-const outputFile = path.join(__dirname, '..', 'audios', 'audio.flac');
+const execPromise = promisify(exec);
 
-function audioParser(inputFile, outputFile) {
-    return new Promise((resolve, reject) => {
-        const ffmpegProcess = exec(`ffmpeg -i ${inputFile} -acodec flac -ar 16000 -ac 1 ${outputFile}`, (error, stdout, stderr) => {
-            if (error) {
-                console.error(`Erro: ${stderr}`);
-                reject(`O processo ffmpeg falhou com o código de saída: ${error.code}`);
-                return;
-            }
+// Adicione esta parte para definir __dirname
+import { fileURLToPath } from 'url';
+import { dirname } from 'path';
 
-            console.log('Arquivo convertido com sucesso:', outputFile);
-            resolve(outputFile);
-        });
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+
+function createWindow() {
+    const win = new BrowserWindow({
+        width: 800,
+        height: 600,
+        webPreferences: {
+            nodeIntegration: true,
+            contextIsolation: false,
+        },
     });
+
+    win.loadFile(path.join(__dirname, 'index.html'));
 }
 
-async function getTextFromAudio(audioPath) {
-    if (typeof audioPath !== 'string') return;
-    const response = await GoogleASR({
-        audioFilepath: audioPath,
+ipcMain.handle('dialog:openFile', async () => {
+    const result = await dialog.showOpenDialog({
+        properties: ['openFile'],
+        filters: [{ name: 'Áudio', extensions: ['mp3', 'mp4', 'flac', 'wav', 'ogg'] }],
     });
-    if (response !== null && response.type === 'success') {
-        return response.alternative[0].transcript;
-    }
-}
+    return result;
+});
 
-async function start() {
+ipcMain.handle('transcreverAudio', async (event, filePath) => {
     try {
-        console.log('Caminho do arquivo de entrada:', inputFile);
-        console.log('Convertendo o audio');
-        const parsedFile = await audioParser(inputFile, outputFile);
-        console.log('Transcrevendo o audio');
-        const text = await getTextFromAudio(parsedFile);
-
-        console.log("TEXTO ANTES DE SUMARIZAR:", text);
-
-        if (text) {
-            const summary = await summarizeText(text);
-            console.log("TEXTO SUMARIZADO:", summary);
-        } else {
-            console.log("Texto não foi obtido do áudio.");
-        }
+        const { stdout } = await execPromise(`/home/victor/TCC/python_env/bin/python /home/victor/TCC/app/transcricao.py "${filePath}"`);
+        return stdout.trim() || 'Erro na transcrição.';
     } catch (error) {
-        console.error('Erro no processo:', error);
+        console.error('Erro ao transcrever o áudio:', error);
+        return null;
     }
-}
+});
 
-start();
+ipcMain.handle('sumarizarTexto', async (event, { transcription, type }) => {
+    if (!transcription) return null;
+    try {
+        const summary = await summarizeText({ text: transcription, type });
+        return summary;
+    } catch (error) {
+        console.error('Erro ao sumarizar o texto:', error);
+        return null;
+    }
+});
+
+app.whenReady().then(createWindow);
+
+app.on('window-all-closed', () => {
+    if (process.platform !== 'darwin') {
+        app.quit();
+    }
+});
+
+app.on('activate', () => {
+    if (BrowserWindow.getAllWindows().length === 0) {
+        createWindow();
+    }
+});

@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Transcrição de Áudio</title>
+    <style>
+        pre {
+            white-space: pre-wrap; /* Quebra de linha */
+            word-wrap: break-word; /* Quebra de palavra longa */
+        }
+        #loading {
+            display: none; /* Oculta o carregamento inicialmente */
+            font-weight: bold;
+            margin-top: 20px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Transcrição de Áudio com Whisper</h1>
+    <button id="select-audio">Selecionar Arquivo de Áudio</button>
+    <p id="selected-file"></p>
+    <h2>Transcrição:</h2>
+    <pre id="transcription"></pre>
+    <h2>Sumarização Abstrativa:</h2>
+    <pre id="summary-abstractive"></pre>
+    <h2>Sumarização Extrativa:</h2>
+    <pre id="summary-extractive"></pre>
+    <div id="loading">Processando, por favor aguarde...</div> <!-- Elemento de carregamento -->
+
+    <script>
+        const { ipcRenderer } = require('electron');
+
+        document.getElementById('select-audio').addEventListener('click', async () => {
+            const result = await ipcRenderer.invoke('dialog:openFile');
+            if (!result.canceled && result.filePaths.length > 0) {
+                const filePath = result.filePaths[0];
+                document.getElementById('selected-file').innerText = `Arquivo selecionado: ${filePath}`;
+                document.getElementById('loading').style.display = 'block'; // Exibe a mensagem de carregamento
+
+                // Chame a função de transcrição
+                const transcription = await ipcRenderer.invoke('transcreverAudio', filePath);
+                document.getElementById('transcription').innerText = transcription || 'Transcrição não disponível.';
+
+                // Chame a função de sumarização abstrativa
+                const summaryAbstractive = await ipcRenderer.invoke('sumarizarTexto', { transcription, type: 'abstractive' });
+                document.getElementById('summary-abstractive').innerText = summaryAbstractive || 'Sumarização abstrativa não disponível.';
+
+                // Chame a função de sumarização extrativa
+                const summaryExtractive = await ipcRenderer.invoke('sumarizarTexto', { transcription, type: 'extractive' });
+                document.getElementById('summary-extractive').innerText = summaryExtractive || 'Sumarização extrativa não disponível.';
+
+                document.getElementById('loading').style.display = 'none'; // Oculta a mensagem de carregamento
+            }
+        });
+    </script>
+</body>
+</html>
