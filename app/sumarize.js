@@ -53,7 +53,7 @@ export async function summarizeText({ text, type }) {
         }
     } else if (type === 'extractive') {
         try {
-            const { stdout } = await execPromise(`/home/victor/TCC/python_env/bin/python /home/victor/TCC/app/summarize_extractive.py "${text}"`);
+            const { stdout } = await execPromise(`/home/victor/UFPI/TCC/python_env/bin/python /home/victor/UFPI/TCC/app/summarize_extractive.py "${text}"`);
             return stdout.trim();
         } catch (error) {
             console.error('Erro ao sumarizar o texto:', error);
