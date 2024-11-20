@@ -36,7 +36,7 @@ ipcMain.handle('dialog:openFile', async () => {
 
 ipcMain.handle('transcreverAudio', async (event, filePath) => {
     try {
-        const { stdout } = await execPromise(`python3 /home/victor/TCC/TCC-2024/app/transcricao.py "${filePath}"`);
+        const { stdout } = await execPromise(`python3 /home/victor/UFPI/TCC/app/transcricao.py "${filePath}"`);
         return stdout.trim() || 'Erro na transcrição.';
     } catch (error) {
         console.error('Erro ao transcrever o áudio:', error);
