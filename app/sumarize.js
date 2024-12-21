@@ -7,7 +7,7 @@ export async function summarizeText({ text, type }) {
     if (type === 'abstractive') {
         const fetch = (await import('node-fetch')).default;
         const maxRetries = 5;
-        const waitTime = 10000; // Tempo de espera em milissegundos (10 segundos)
+        const waitTime = 10000;
 
         for (let attempt = 1; attempt <= maxRetries; attempt++) {
             try {
@@ -53,7 +53,7 @@ export async function summarizeText({ text, type }) {
         }
     } else if (type === 'extractive') {
         try {
-            const { stdout } = await execPromise(`/home/victor/UFPI/TCC/python_env/bin/python /home/victor/UFPI/TCC/app/summarize_extractive.py "${text}"`);
+            const { stdout } = await execPromise(`/home/victor/UFPI/TCC-2024/python_env/bin/python /home/victor/UFPI/TCC-2024/app/summarize_extractive.py "${text}"`);
             return stdout.trim();
         } catch (error) {
             console.error('Erro ao sumarizar o texto:', error);

@@ -2,11 +2,10 @@ import { app, BrowserWindow, ipcMain, dialog } from 'electron';
 import path from 'path';
 import { exec } from 'child_process';
 import { promisify } from 'util';
-import { summarizeText } from './sumarize.js'; // Use extensão .js
+import { summarizeText } from './sumarize.js';
 
 const execPromise = promisify(exec);
 
-// Adicione esta parte para definir __dirname
 import { fileURLToPath } from 'url';
 import { dirname } from 'path';
 
@@ -36,7 +35,7 @@ ipcMain.handle('dialog:openFile', async () => {
 
 ipcMain.handle('transcreverAudio', async (event, filePath) => {
     try {
-        const { stdout } = await execPromise(`python3 /home/victor/UFPI/TCC/app/transcricao.py "${filePath}"`);
+        const { stdout } = await execPromise(`python3 /home/victor/UFPI/TCC-2024/app/transcricao.py "${filePath}"`);
         return stdout.trim() || 'Erro na transcrição.';
     } catch (error) {
         console.error('Erro ao transcrever o áudio:', error);
