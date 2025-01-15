@@ -2,7 +2,7 @@ import sys
 import whisper
 
 def transcrever_audio(audio_filepath):
-    model = whisper.load_model("base")
+    model = whisper.load_model("medium")
     result = model.transcribe(audio_filepath, language='portuguese')
     return result['text']
 

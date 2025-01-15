@@ -6,13 +6,16 @@
     <title>Transcrição de Áudio</title>
     <style>
         pre {
-            white-space: pre-wrap; /* Quebra de linha */
-            word-wrap: break-word; /* Quebra de palavra longa */
+            white-space: pre-wrap;
+            word-wrap: break-word;
         }
         #loading {
-            display: none; /* Oculta o carregamento inicialmente */
+            display: none;
             font-weight: bold;
             margin-top: 20px;
+        }
+        .error {
+            color: red;
         }
     </style>
 </head>
@@ -26,33 +29,53 @@
     <pre id="summary-abstractive"></pre>
     <h2>Sumarização Extrativa:</h2>
     <pre id="summary-extractive"></pre>
-    <div id="loading">Processando, por favor aguarde...</div> <!-- Elemento de carregamento -->
+    <h2>Resultados ROUGE:</h2>
+    <pre id="rouge-results"></pre>
+    <div id="loading">Processando, por favor aguarde...</div>
+    <div id="error-message" class="error"></div>
 
     <script>
         const { ipcRenderer } = require('electron');
 
-        document.getElementById('select-audio').addEventListener('click', async () => {
-            const result = await ipcRenderer.invoke('dialog:openFile');
-            if (!result.canceled && result.filePaths.length > 0) {
-                const filePath = result.filePaths[0];
-                document.getElementById('selected-file').innerText = `Arquivo selecionado: ${filePath}`;
-                document.getElementById('loading').style.display = 'block'; // Exibe a mensagem de carregamento
+        async function processAudio() {
+            const errorMessageElement = document.getElementById('error-message');
+            errorMessageElement.textContent = '';
+            const filePath = await ipcRenderer.invoke('dialog:openFile');
 
-                // Chame a função de transcrição
-                const transcription = await ipcRenderer.invoke('transcreverAudio', filePath);
-                document.getElementById('transcription').innerText = transcription || 'Transcrição não disponível.';
-
-                // Chame a função de sumarização abstrativa
-                const summaryAbstractive = await ipcRenderer.invoke('sumarizarTexto', { transcription, type: 'abstractive' });
-                document.getElementById('summary-abstractive').innerText = summaryAbstractive || 'Sumarização abstrativa não disponível.';
-
-                // Chame a função de sumarização extrativa
-                const summaryExtractive = await ipcRenderer.invoke('sumarizarTexto', { transcription, type: 'extractive' });
-                document.getElementById('summary-extractive').innerText = summaryExtractive || 'Sumarização extrativa não disponível.';
-
-                document.getElementById('loading').style.display = 'none'; // Oculta a mensagem de carregamento
+            if (!filePath) {
+                errorMessageElement.textContent = 'Nenhum arquivo selecionado.';
+                return;
             }
-        });
+
+            document.getElementById('selected-file').innerText = `Arquivo selecionado: ${filePath}`;
+            document.getElementById('loading').style.display = 'block';
+
+            try {
+                const transcription = await ipcRenderer.invoke('transcreverAudio', filePath);
+                document.getElementById('transcription').innerText = transcription;
+
+                const summaryAbstractive = await ipcRenderer.invoke('sumarizarTexto', { transcription, type: 'abstractive' });
+                document.getElementById('summary-abstractive').innerText = summaryAbstractive;
+
+                const summaryExtractive = await ipcRenderer.invoke('sumarizarTexto', { transcription, type: 'extractive' });
+                document.getElementById('summary-extractive').innerText = summaryExtractive;
+
+                const rougeResults = await ipcRenderer.invoke('compareWithCorrectData', {
+                    transcription,
+                    abstractiveSummary: summaryAbstractive,
+                    extractiveSummary: summaryExtractive,
+                    filePath,
+                });
+                document.getElementById('rouge-results').innerText = JSON.stringify(rougeResults, null, 2);
+            } catch (error) {
+                console.error('Erro durante o processamento:', error.message);
+                errorMessageElement.textContent = 'Erro ao processar o áudio. Verifique o console.';
+            } finally {
+                document.getElementById('loading').style.display = 'none';
+            }
+        }
+
+        document.getElementById('select-audio').addEventListener('click', processAudio);
     </script>
 </body>
 </html>
